@@ -1,8 +1,27 @@
 load "the_cloud_market_client.rb"
 
-client = TheCloudMarket::Client.new 'quentin_key', nil, nil, nil, nil, 'http://localhost:3000'
+# One-per-user: Listed in your account: http://192.168.1.7:3000/account
+API_KEY = 'your-api-key'
+# One-per-ownership: Last part of the ownership url: http://thecloudmarket.com/owner/809621114589
+OWNERSHIP_ID = '809621114589'
+# You problably keep your own database for published images.
+# Let's pretend that you've read your db and got these contents
+readmes = { 'ami-1205e27b' => '<h1>Readme description for ami-ca9e7aa3</h1><p>Nice!</p>', 
+            'ami-doesnotexist' => '<p>An example of a missing image</p>' }
+tags = { 'ami-1205e27b' => "example-tag, another", 
+          'ami-doesnotexist' => 'last, tags, not, even, used' }
 
-own = client.ownership_info '725966715235'
+
+# Initialize the Client with your credentials (API KEY).
+# Here we give additional parameters for the proxy host, port, user and password
+# The last parameter allows you to test against a dummy service
+client = TheCloudMarket::Client.new API_KEY,
+    nil, nil, nil, nil, 'http://192.168.1.7:3000'
+
+# Use your ownership id to get your information from TheCloudMarket:
+own = client.ownership_info OWNERSHIP_ID
+
+# Write the information to the console
 puts <<EOF
 Information for owner code: #{own.code}:
 ----------------------------------------
@@ -15,6 +34,7 @@ Information for owner code: #{own.code}:
  The following images are available from this owner:
 EOF
 
+# Information about the owned images is retrieved with the user
 own.images.each_value do |img| 
   puts <<EOF
     [#{img.internal_id}] #{img.image_id}:#{img.name or "<name not set>"}.
@@ -23,21 +43,20 @@ own.images.each_value do |img|
 EOF
 end
 
-#
+
 # Now do something interesting... Let's update the images
 
 # Check every image and set a default name if it is missing
 # Also count which kernels are the most used
-
 kernels = Hash.new(0)
 own.images.each_value do |img|
   info = client.image_info img.image_id
   kernels[info.kernel.image_id] += 1 if info.kernel 
   if info.description.nil? || info.description.empty?
-    client.update_image(info.internal_id, info.name, "This image belongs to #{own.name or own.description or own.name}")
-    puts "  + Image description updated"
+    client.update_image(info.internal_id, info.name, "This image belongs to #{own.name or own.description or own.id}")
+    puts "  + Image description updated for #{img.image_id}"
   elsif
-    puts "  - Not updating. Current description <#{info.description}>"
+    puts "  - Not updating #{img.image_id}. Current description <#{info.description}>"
   end
 end
 
@@ -48,14 +67,10 @@ kernels.each do |k,v|
   puts "  #{k} is used on #{v} images"
 end
 
-# README:
+# Updating the README:
 # Batch update readme for each image from some source
 
-# Let's pretend that this information is kept somewhere else.
-# Then, it would be desirable to reuse the same information for updating thecloudmarket.com
-readmes = { 'ami-a1a981d5' => 'Readme description for ami-a1a981d5', 
-            'ami-6a917603' => 'Readme description for another image, this time is ami-6a917603',
-            'ami-doesnotexist' => 'An example of a missing image' }
+
 puts
 puts "Updating readmes"
 puts "----------------"
@@ -72,11 +87,8 @@ unless readmes.empty?
   end
 end
 
-# TAGS:
+# Updating TAGS:
 # Update tags for images
-tags = { 'ami-a1a981d5' => "example-tag, another, tagged-at-#{Time.new.to_s.gsub(' ', '_')}", 
-          'ami-6a917603' => 'more, tags',
-          'ami-doesnotexist' => 'last, tags, not, even, used' }
 puts
 puts "Updating tags"
 puts "----------------"
