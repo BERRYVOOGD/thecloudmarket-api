@@ -139,6 +139,7 @@ module TheCloudMarket
     text_node :deleted_at, "deleted-at", :default_value => nil
     text_node :platform, "platform-definition/name", :default_value => nil
     text_node :description, "description", :default_value=>nil
+    text_node :readme, "readme", :default_value=>nil
     numeric_node :owner_id, "owner-id", :default_value=>nil
   end
   
